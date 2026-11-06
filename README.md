@@ -1,5 +1,7 @@
 # LogicBench — Boolean Expression Simplification & Synthesis Workbench
 
+> **Live Interactive Workbench**: [https://logicbench-simplifier.vercel.app](https://logicbench-simplifier.vercel.app)
+
 An exact Boolean Expression Simplification minor project combining a Python **Quine-McCluskey + Exact Minimum Cover** backend engine with a zero-dependency **Interactive K-Map & IEEE-1364 Verilog Synthesis Workbench**.
 
 ## Project Structure
