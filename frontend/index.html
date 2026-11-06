@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LogicBench — IEEE-1364 Boolean Minimization Workbench</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap"
+    rel="stylesheet"
+  />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body>
+
+  <!-- ═══════════════════════════════════════
+       Top Navigation Header
+  ═══════════════════════════════════════ -->
+  <header class="site-header">
+    <div class="header-brand">
+      <div class="logo-mark">LB</div>
+      <div class="header-brand-text">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <h1>LogicBench</h1>
+          <span class="chip mono">IEEE-1364</span>
+        </div>
+        <p class="subtitle">Quine-McCluskey &amp; Petrick's Method Boolean Simplifier</p>
+      </div>
+    </div>
+
+    <div class="header-controls">
+      <label class="label-sm" for="presetSelect">Preset:</label>
+      <select id="presetSelect" class="ctrl-select mono">
+        <option value="default">Σm(0,1,2,5,6,7,8,9,10,14) + d(4,15)</option>
+        <option value="bcd7">BCD 7-Segment 'a' Decoder</option>
+        <option value="prime">4-Bit Prime Detector Σm(2,3,5,7,11,13)</option>
+        <option value="xor">4-Bit Odd Parity Checker</option>
+        <option value="clear">Clear All (0)</option>
+      </select>
+      <button id="randomBtn" class="ctrl-btn">⚂ Randomize</button>
+    </div>
+  </header>
+
+
+  <!-- ═══════════════════════════════════════
+       Result Ribbon — Minimal SOP & KPIs
+  ═══════════════════════════════════════ -->
+  <section class="result-ribbon">
+
+    <!-- SOP Expression -->
+    <div>
+      <div class="ribbon-label">
+        Minimal SOP Expression
+        <span id="epiCountBadge" class="chip accent mono">3 Terms</span>
+      </div>
+      <div id="sopOutput" class="sop-output mono">
+        F(A,B,C,D) = B'C' + A'B + CD'
+      </div>
+      <div class="ribbon-meta">
+        <span id="mintermSummary">Σm(0, 1, 2, 5, 6, 7, 8, 9, 10, 14)</span>
+        <span id="dontCareSummary">+ d(4, 15)</span>
+      </div>
+    </div>
+
+    <!-- Hardware KPI tiles -->
+    <div class="kpi-row">
+      <div class="kpi-tile">
+        <div class="kpi-label">Literals</div>
+        <div class="kpi-value mono">
+          <span id="minLiterals">6</span>
+          <span id="canonLiterals" class="kpi-strikeout">40</span>
+        </div>
+      </div>
+      <div class="kpi-tile">
+        <div class="kpi-label">Gate Count</div>
+        <div class="kpi-value mono">
+          <span id="gateCount">4</span>
+          <span class="kpi-strikeout" style="font-size:11px;color:var(--text-muted);text-decoration:none;margin-left:3px;">AND/OR</span>
+        </div>
+      </div>
+      <div class="kpi-tile">
+        <div class="kpi-label">Reduction</div>
+        <div class="kpi-value green mono" id="reductionPct">85.0%</div>
+      </div>
+    </div>
+
+  </section>
+
+
+  <!-- ═══════════════════════════════════════
+       Main 3-Column Workbench
+  ═══════════════════════════════════════ -->
+  <main class="workbench">
+
+    <!-- ─── LEFT: Interactive Karnaugh Map ─── -->
+    <div class="panel">
+      <div class="panel-header">
+        <div>
+          <div class="panel-index">01</div>
+          <div class="panel-title">Karnaugh Map <span class="mono" style="font-weight:400;font-size:11px;color:var(--text-muted);">(AB \ CD)</span></div>
+          <div class="panel-subtitle">Click cell to cycle <span class="mono" style="font-weight:600;">0 → 1 → X</span></div>
+        </div>
+        <span class="chip mono">Gray Code</span>
+      </div>
+
+      <!-- K-Map grid container (built by JS) -->
+      <div class="kmap-wrapper">
+        <div id="kmapContainer" class="kmap-grid">
+          <!-- Column header row injected by JS -->
+        </div>
+      </div>
+
+      <!-- Prime Implicant loop pills -->
+      <div class="pi-pills-section">
+        <div class="pi-pills-label">Selected PI Loops — hover to inspect</div>
+        <div id="piPills" class="pi-pills-wrap"></div>
+      </div>
+    </div>
+
+
+    <!-- ─── CENTER: QM Coverage Matrix + Verilog ─── -->
+    <div class="panel" style="display:flex;flex-direction:column;">
+      <div class="panel-header">
+        <div>
+          <div class="panel-index">02</div>
+          <div class="panel-title">Prime Implicant Coverage Matrix</div>
+          <div class="panel-subtitle">Quine-McCluskey tabular reduction &amp; essential extraction</div>
+        </div>
+        <span class="chip green mono">★ = Essential</span>
+      </div>
+
+      <!-- PI table -->
+      <div style="overflow-x:auto;flex:1;">
+        <table class="pi-table">
+          <thead>
+            <tr>
+              <th>Term</th>
+              <th>Mask</th>
+              <th>Covered Minterms</th>
+              <th>Role</th>
+            </tr>
+          </thead>
+          <tbody id="piTableBody"></tbody>
+        </table>
+      </div>
+
+      <!-- Verilog HDL -->
+      <div class="verilog-section">
+        <div class="verilog-toolbar">
+          <span class="verilog-label">IEEE-1364 Verilog Synthesis</span>
+          <button id="copyVerilogBtn" class="copy-btn">Copy HDL ↗</button>
+        </div>
+        <pre id="verilogCode" class="verilog-pre"></pre>
+      </div>
+    </div>
+
+
+    <!-- ─── RIGHT: Gate Schematic + Truth Table ─── -->
+    <div class="panel" style="display:flex;flex-direction:column;">
+      <div class="panel-header">
+        <div>
+          <div class="panel-index">03</div>
+          <div class="panel-title">Truth Table &amp; Gate Netlist</div>
+          <div class="panel-subtitle">16-state canonical evaluation</div>
+        </div>
+      </div>
+
+      <!-- Gate schematic -->
+      <div class="schematic-area">
+        <svg id="schematicSvg" viewBox="0 0 320 170" style="width:100%;max-height:160px;"></svg>
+      </div>
+
+      <!-- Truth table -->
+      <div style="flex:1;overflow-y:auto;max-height:340px;">
+        <table class="truth-table">
+          <thead>
+            <tr>
+              <th>Dec</th>
+              <th>A</th>
+              <th>B</th>
+              <th>C</th>
+              <th>D</th>
+              <th>F</th>
+            </tr>
+          </thead>
+          <tbody id="truthTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+
+
+  <!-- ═══════════════════════════════════════
+       Footer
+  ═══════════════════════════════════════ -->
+  <footer class="site-footer">
+    <span class="footer-text">
+      LogicBench &mdash; Exact Boolean Minimization via Quine-McCluskey &amp; Petrick's Method
+    </span>
+    <span class="footer-text mono" style="font-size:10px;">IEEE Std 1364-2001</span>
+  </footer>
+
+
+  <script src="app.js"></script>
+</body>
+</html>
